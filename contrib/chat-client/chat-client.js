@@ -184,7 +184,7 @@
         
                         },this),
                         session_id);
-        	},
+                },
             
                 _receive_info: function(data){
                     if(enable_logging && console)
@@ -251,8 +251,7 @@
                     default:
                         // do nothing for other message types
                         break;
-                    };
-        
+                    }
                 },
 
                 
