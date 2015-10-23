@@ -14,6 +14,7 @@
     User.prototype = user_prototype;
     
     function create_user(user_code, user_nick){
+        console.log('create_user', user_code, user_nick);
         return new User(user_code, user_nick);}
 
     function call_fun_list(fun_list, evt){
@@ -60,29 +61,21 @@
                         }
                     }
                 },
-                update_user_writing_state: function(code, state){
+                get_user: function(code) {
                     var user = this.users[code];
+                    if (user === undefined) {
+                        console.log('this.users', this.users);
+                        user = create_user(code, code);
+                        this.users[code] = user;
+                    }
+                    return user;
+                },
+                update_user_writing_state: function(code, state){
+                    var user = this.get_user(code);
                     if(user.is_writing !== state){
                         user.is_writing = state;
                         if(code === this.user.code)
                             this.user.is_writing = state;
-                    }
-                },
-                add_user_code_list: function(user_code_list){
-                    var that = this;
-                    var new_codes = _.filter(
-                        user_code_list,
-                        function(user_code){
-                            return !_.any(that.users,
-                                         function(value,key,obj){
-                                             return key == user_code;
-                                         });});
-                    if(new_codes){
-                        _.each(new_codes,
-                               function(code){
-                                   that.users[code] = create_user(code, code);
-                               });
-                        this.trigger_user_change();
                     }
                 },
                 remove_user: function(user_code){
@@ -110,7 +103,6 @@
                                   {room_code: this.room_code,
                                    user_code: this.user.code,
                                    user_nick: this.user.nick});
-                    this.client.get_consumers(this.room_code);
                 },
         
                 trigger_close: function(){
@@ -127,6 +119,7 @@
                     call_fun_list(this.handlers.onerror_handler_list, data);
                 },
                 trigger_user_change: function(){
+                    console.log('trigger_user_change');
                     this.trigger_info({type: 'user_change'});
                 },
                 trigger_writing_change:function(code){
@@ -154,14 +147,13 @@
                             });
                             this.client.onmessage(function(data){
                                 if(data.channel_code == that.room_code){
-                                    switch(data.type){
-                                    case 'message':
-                                        that._receive_message(data.data);
-                                        break;
-                                    case 'cached_message':
-                                        that._receive_cached_message(data.data);
-                                        break;
-                                    default:
+                                    if (data.type === 'message') {
+                                        if (data.meta.from_cache) {
+                                            that._receive_cached_message(data.data);
+                                        } else {
+                                            that._receive_message(data.data);
+                                        }
+                                    } else {
                                         console.log("INVALID XXX data", data);
                                     }
                                 }else{
@@ -192,9 +184,6 @@
                     switch(data.type){
                     case 'subscribed':
                         this.trigger_open();
-                        break;
-                    case 'consumers':
-                        this.add_user_code_list(data.data);
                         break;
                     case 'add_subscribtion':
                         var user = create_user(data.data, data.data);
@@ -241,17 +230,11 @@
                 },
 
                 _receive_cached_message: function(data){
-                    if(enable_logging && console)
+                    if(enable_logging && console) {
                         console.log('cached_response, chat-client', data);
-                    switch(data.type){
-                    case 'message':
-                        var user_code = data.code;
-                        this.trigger_message(data);
-                        break;
-                    default:
-                        // do nothing for other message types
-                        break;
                     }
+
+                    this.trigger_message(data);
                 },
 
                 
@@ -262,14 +245,16 @@
                                         {code:this.user.code,
                                          nick:this.user.nick,
                                          type: 'message',
-                                         data: msg});
+                                         data: msg},
+                                        {persist: true});
         
                 },
                 send_user_data: function(user){
                     this.client.publish(this.room_code,
                                         {'type': 'user_data',
                                          'user_code': user.code,
-                                         'user_nick': user.nick});
+                                         'user_nick': user.nick},
+                                        {persist: false});
                 },
         
                 rename: function(nick){
@@ -279,14 +264,16 @@
                     if(!this.user.is_writing){
                         this.client.publish(this.room_code,
                                             {'type': 'start_writing',
-                                             'data': this.user.code});                
+                                             'data': this.user.code},
+                                            {persist: false});                
                     }
                 },
                 stop_writing: function(){
                     if(this.user.is_writing){
                         this.client.publish(this.room_code,
                                             {'type': 'stop_writing',
-                                             'data': this.user.code});                
+                                             'data': this.user.code},
+                                            {persist: false});                
                     }
                 }
         
