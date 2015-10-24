@@ -191,6 +191,7 @@
                         this.send_user_data(chatClient.user);
                         break;
                     case 'remove_subscribtion':
+                        console.log('[debug] remove_subscribtion:' , data);
                         this.remove_user(data.data);
                         break;
                     default:
