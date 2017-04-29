@@ -1,6 +1,6 @@
 {
   "name": "publicator-js-client",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "publicator-js-client ====================",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
